@@ -237,7 +237,15 @@ def main() -> None:
 
     sampler = DistributedSampler(train_ds, shuffle=True) if is_dist() else None
     batch_size = int(cfg["training"]["batch_size_per_gpu"])
-    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler, shuffle=sampler is None, num_workers=8, pin_memory=True)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        sampler=sampler,
+        shuffle=sampler is None,
+        num_workers=8,
+        pin_memory=True,
+        drop_last=True,
+    )
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
