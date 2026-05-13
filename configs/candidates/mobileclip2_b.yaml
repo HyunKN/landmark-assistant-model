@@ -6,7 +6,7 @@ model:
   pretrained: "dfndr2b"
   note: "Balanced MobileCLIP2 accuracy candidate."
 training:
-  image_size: 384
+  image_size: 224
   epochs: 30
   batch_size_per_gpu: 12
   optimizer: "adamw"
