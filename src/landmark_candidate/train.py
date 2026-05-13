@@ -92,9 +92,14 @@ class MobileClipLandmarkModel(nn.Module):
 
         pretrained = os.environ.get("MOBILECLIP_CHECKPOINT") or cfg["model"].get("pretrained", "dfndr2b")
         self.clip, _, _ = open_clip.create_model_and_transforms(cfg["model"]["model_name"], pretrained=pretrained)
-        if cfg["training"].get("freeze_image_encoder", False):
-            for param in self.clip.parameters():
-                param.requires_grad = False
+        for param in self.clip.parameters():
+            param.requires_grad = False
+        if not cfg["training"].get("freeze_image_encoder", False):
+            visual = getattr(self.clip, "visual", None)
+            if visual is None:
+                raise RuntimeError("MobileCLIP model does not expose an image tower at clip.visual")
+            for param in visual.parameters():
+                param.requires_grad = True
         self.embedding = nn.Sequential(
             nn.LazyLinear(embedding_dim),
             nn.BatchNorm1d(embedding_dim),
