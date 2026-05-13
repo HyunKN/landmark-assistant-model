@@ -237,6 +237,13 @@ def main() -> None:
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
     model = build_model(cfg, len(names)).to(device)
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        dummy = torch.zeros(2, 3, image_size, image_size, device=device)
+        dummy_labels = torch.zeros(2, dtype=torch.long, device=device)
+        model(dummy, dummy_labels)
+    model.train(was_training)
     if is_dist():
         model = DDP(model, device_ids=[local_rank()], find_unused_parameters=False)
 
