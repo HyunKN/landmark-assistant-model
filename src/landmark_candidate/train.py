@@ -359,16 +359,31 @@ def main() -> None:
             checkpoint = torch.load(run_dir / "best.pt", map_location=device)
             base_model.load_state_dict(checkpoint["model"])
         test_metrics = evaluate(base_model, test_loader, device)
-        onnx_ok = export_onnx(base_model, image_size, run_dir / "landmark_encoder.onnx", device)
         final = {
             **best_metrics,
             "test_top1_accuracy": test_metrics["top1_accuracy"],
             "test_top3_accuracy": test_metrics["top3_accuracy"],
             "test_count": test_metrics["count"],
-            "onnx_export_success": onnx_ok,
-            "onnx_file_mb": (run_dir / "landmark_encoder.onnx").stat().st_size / 1024 / 1024 if onnx_ok else None,
+            "onnx_export_success": None,
+            "onnx_file_mb": None,
         }
         (run_dir / "metrics.json").write_text(json.dumps(final, indent=2), encoding="utf-8")
+        print(json.dumps(final, indent=2), flush=True)
+        try:
+            import wandb
+
+            wandb.log(final)
+        except Exception:
+            pass
+
+        export_enabled = os.environ.get("EXPORT_ONNX", "1").lower() not in {"0", "false", "no"}
+        if export_enabled:
+            onnx_ok = export_onnx(base_model, image_size, run_dir / "landmark_encoder.onnx", device)
+            final["onnx_export_success"] = onnx_ok
+            final["onnx_file_mb"] = (
+                (run_dir / "landmark_encoder.onnx").stat().st_size / 1024 / 1024 if onnx_ok else None
+            )
+            (run_dir / "metrics.json").write_text(json.dumps(final, indent=2), encoding="utf-8")
         try:
             import wandb
 
@@ -376,7 +391,7 @@ def main() -> None:
             wandb.finish()
         except Exception:
             pass
-        print(json.dumps(final, indent=2))
+        print(json.dumps(final, indent=2), flush=True)
 
     if is_dist():
         dist.destroy_process_group()
