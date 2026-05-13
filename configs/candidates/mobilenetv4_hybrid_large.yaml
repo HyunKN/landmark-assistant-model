@@ -1,0 +1,41 @@
+model:
+  id: "mobilenetv4_hybrid_large"
+  family: "timm"
+  model_name: "hf_hub:timm/mobilenetv4_hybrid_large.e600_r384_in1k"
+  hf_repo: null
+  pretrained: null
+  note: "Accuracy-first MobileNetV4 Hybrid Large supervised candidate."
+training:
+  image_size: 384
+  epochs: 30
+  batch_size_per_gpu: 16
+  optimizer: "adamw"
+  learning_rate: 5e-05
+  head_learning_rate: 0.0001
+  weight_decay: 0.05
+  label_smoothing: 0.05
+  loss: "ce_arcface_accuracy_first"
+  arcface_margin: 0.2
+  arcface_scale: 30
+  embedding_dim: 512
+  fine_tune_policy: "full_finetune"
+  freeze_image_encoder: false
+  image_mean:
+    - 0.485
+    - 0.456
+    - 0.406
+  image_std:
+    - 0.229
+    - 0.224
+    - 0.225
+runtime:
+  gpu_count: 6
+  precision: "fp16_amp_after_fp32_smoke"
+  tracker: "wandb"
+  backup: "rclone gdrive:"
+data:
+  strategy: "locked_test_plus_5fold_trainval"
+  seed: 20260513
+  folds: 5
+  test_ratio: 0.15
+  supervised_filter: "label_status == confirmed"

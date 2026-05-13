@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+outputs/
+checkpoints/
+wandb/
+logs/
+.env
+*.onnx
+*.pt
+*.pth
+data/
+splits/*.json
+*.log

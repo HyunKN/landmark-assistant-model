@@ -1,0 +1,41 @@
+model:
+  id: "mobileclip2_b"
+  family: "mobileclip2"
+  model_name: "MobileCLIP2-B"
+  hf_repo: "apple/MobileCLIP2-B"
+  pretrained: "dfndr2b"
+  note: "Balanced MobileCLIP2 accuracy candidate."
+training:
+  image_size: 384
+  epochs: 30
+  batch_size_per_gpu: 12
+  optimizer: "adamw"
+  learning_rate: 1e-05
+  head_learning_rate: 0.0001
+  weight_decay: 0.05
+  label_smoothing: 0.05
+  loss: "ce_arcface_accuracy_first"
+  arcface_margin: 0.2
+  arcface_scale: 30
+  embedding_dim: 512
+  fine_tune_policy: "partial_finetune"
+  freeze_image_encoder: false
+  image_mean:
+    - 0.48145466
+    - 0.4578275
+    - 0.40821073
+  image_std:
+    - 0.26862954
+    - 0.26130258
+    - 0.27577711
+runtime:
+  gpu_count: 6
+  precision: "fp16_amp_after_fp32_smoke"
+  tracker: "wandb"
+  backup: "rclone gdrive:"
+data:
+  strategy: "locked_test_plus_5fold_trainval"
+  seed: 20260513
+  folds: 5
+  test_ratio: 0.15
+  supervised_filter: "label_status == confirmed"
