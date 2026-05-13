@@ -17,7 +17,7 @@ fi
 
 mkdir -p runs logs splits
 
-tmux new-session -d -s "$SESSION" "cd '$PWD' && source .venv/bin/activate && export DATA_ROOT='$DATA_ROOT' WANDB_PROJECT='$WANDB_PROJECT' CUDA_VISIBLE_DEVICES='$GPUS' && python -m landmark_candidate.split_data --data-root '$DATA_ROOT' --out splits/kfold_seed20260513.json --seed 20260513 --folds 5 --test-ratio 0.15 && torchrun --nproc_per_node=$NPROC -m landmark_candidate.train --config '$CONFIG' --data-root '$DATA_ROOT' --split splits/kfold_seed20260513.json --fold '$FOLD' 2>&1 | tee logs/${SESSION}.log"
+tmux new-session -d -s "$SESSION" "cd '$PWD' && source .venv/bin/activate && export PYTHONPATH='$PWD/src:\${PYTHONPATH:-}' DATA_ROOT='$DATA_ROOT' WANDB_PROJECT='$WANDB_PROJECT' CUDA_VISIBLE_DEVICES='$GPUS' && python -m landmark_candidate.split_data --data-root '$DATA_ROOT' --out splits/kfold_seed20260513.json --seed 20260513 --folds 5 --test-ratio 0.15 && torchrun --nproc_per_node=$NPROC -m landmark_candidate.train --config '$CONFIG' --data-root '$DATA_ROOT' --split splits/kfold_seed20260513.json --fold '$FOLD' 2>&1 | tee logs/${SESSION}.log"
 
 echo "Started tmux session: $SESSION"
 echo "Attach with: tmux attach -t $SESSION"

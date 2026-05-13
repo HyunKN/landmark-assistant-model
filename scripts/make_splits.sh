@@ -7,6 +7,7 @@ FOLDS="${FOLDS:-5}"
 TEST_RATIO="${TEST_RATIO:-0.15}"
 
 mkdir -p splits
+export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
 python -m landmark_candidate.split_data \
   --data-root "$DATA_ROOT" \
   --out "splits/kfold_seed${SEED}.json" \
