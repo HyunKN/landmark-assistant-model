@@ -65,9 +65,8 @@ class TimmLandmarkModel(nn.Module):
         import timm
 
         self.backbone = timm.create_model(model_name, pretrained=True, num_classes=0, global_pool="avg")
-        feature_dim = int(getattr(self.backbone, "num_features"))
         self.embedding = nn.Sequential(
-            nn.Linear(feature_dim, embedding_dim),
+            nn.LazyLinear(embedding_dim),
             nn.BatchNorm1d(embedding_dim),
         )
         if "arcface" in loss_name:
