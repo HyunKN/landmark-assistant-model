@@ -4,11 +4,11 @@ model:
   model_name: "MobileCLIP2-S4"
   hf_repo: "apple/MobileCLIP2-S4"
   pretrained: "dfndr2b"
-  note: "Accuracy-first MobileCLIP2 candidate. Start with partial fine-tune."
+  note: "Accuracy-first MobileCLIP2 candidate. Full image-encoder finetune with cosine LR + warmup."
 training:
   image_size: 224
   epochs: 30
-  batch_size_per_gpu: 8
+  batch_size_per_gpu: 14
   optimizer: "adamw"
   learning_rate: 1e-05
   head_learning_rate: 0.0001
@@ -18,8 +18,15 @@ training:
   arcface_margin: 0.2
   arcface_scale: 30
   embedding_dim: 512
-  fine_tune_policy: "partial_finetune"
+  fine_tune_policy: "full_finetune"
   freeze_image_encoder: false
+  warmup_epochs: 2
+  lr_scheduler: "cosine"
+  min_lr_ratio: 0.01
+  aug_random_resized_crop_min_scale: 0.8
+  aug_randaugment_num_ops: 2
+  aug_randaugment_magnitude: 5
+  class_balance_strategy: "sqrt_weighted"
   image_mean:
     - 0.48145466
     - 0.4578275

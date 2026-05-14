@@ -62,7 +62,7 @@ def main() -> None:
         model(dummy)
     model.load_state_dict(checkpoint["model"])
 
-    test_metrics = evaluate(model, test_loader, device)
+    test_metrics = evaluate(model, test_loader, device, names)
     metrics_path = run_dir / "metrics.json"
     final = {}
     if metrics_path.exists():
@@ -72,6 +72,9 @@ def main() -> None:
             "test_top1_accuracy": test_metrics["top1_accuracy"],
             "test_top3_accuracy": test_metrics["top3_accuracy"],
             "test_count": test_metrics["count"],
+            "test_macro_f1": test_metrics.get("macro_f1"),
+            "test_per_class": test_metrics.get("per_class"),
+            "test_confusion_matrix": test_metrics.get("confusion_matrix"),
             "recovered_from_checkpoint": True,
         }
     )

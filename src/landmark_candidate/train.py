@@ -6,6 +6,7 @@ import json
 import math
 import os
 import time
+from collections import Counter
 from pathlib import Path
 
 import torch
@@ -13,9 +14,9 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 import yaml
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, DistributedSampler, WeightedRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -149,10 +150,13 @@ def transforms_for(image_size: int, cfg: dict) -> tuple[transforms.Compose, tran
     else:
         mean = tuple(cfg["training"].get("image_mean", [0.485, 0.456, 0.406]))
         std = tuple(cfg["training"].get("image_std", [0.229, 0.224, 0.225]))
+    crop_min_scale = float(cfg["training"].get("aug_random_resized_crop_min_scale", 0.8))
+    ra_num_ops = int(cfg["training"].get("aug_randaugment_num_ops", 2))
+    ra_magnitude = int(cfg["training"].get("aug_randaugment_magnitude", 5))
     train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(image_size, scale=(0.65, 1.0)),
+        transforms.RandomResizedCrop(image_size, scale=(crop_min_scale, 1.0)),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandAugment(num_ops=2, magnitude=7),
+        transforms.RandAugment(num_ops=ra_num_ops, magnitude=ra_magnitude),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std),
     ])
@@ -166,7 +170,7 @@ def transforms_for(image_size: int, cfg: dict) -> tuple[transforms.Compose, tran
 
 
 @torch.no_grad()
-def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict:
+def evaluate(model: nn.Module, loader: DataLoader, device: torch.device, class_names_list: list[str] | None = None) -> dict:
     model.eval()
     y_true: list[int] = []
     y_pred_top1: list[int] = []
@@ -183,7 +187,64 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict
         total += labels.numel()
     top1 = accuracy_score(y_true, y_pred_top1) if y_true else 0.0
     top3 = top3_hits / max(total, 1)
-    return {"top1_accuracy": float(top1), "top3_accuracy": float(top3), "count": int(total)}
+    out: dict = {"top1_accuracy": float(top1), "top3_accuracy": float(top3), "count": int(total)}
+    if class_names_list and y_true:
+        report = classification_report(
+            y_true,
+            y_pred_top1,
+            labels=list(range(len(class_names_list))),
+            target_names=class_names_list,
+            output_dict=True,
+            zero_division=0,
+        )
+        per_class = {}
+        for name in class_names_list:
+            entry = report.get(name, {})
+            per_class[name] = {
+                "precision": float(entry.get("precision", 0.0)),
+                "recall": float(entry.get("recall", 0.0)),
+                "f1_score": float(entry.get("f1-score", 0.0)),
+                "support": int(entry.get("support", 0)),
+            }
+        out["per_class"] = per_class
+        out["macro_f1"] = float(report.get("macro avg", {}).get("f1-score", 0.0))
+        cm = confusion_matrix(y_true, y_pred_top1, labels=list(range(len(class_names_list))))
+        out["confusion_matrix"] = cm.tolist()
+    return out
+
+
+def build_scheduler(optimizer: torch.optim.Optimizer, cfg: dict, steps_per_epoch: int) -> torch.optim.lr_scheduler.LambdaLR | None:
+    scheduler_name = cfg["training"].get("lr_scheduler", "none")
+    if scheduler_name == "none":
+        return None
+    warmup_epochs = int(cfg["training"].get("warmup_epochs", 2))
+    total_epochs = int(cfg["training"]["epochs"])
+    min_lr_ratio = float(cfg["training"].get("min_lr_ratio", 0.01))
+    warmup_steps = warmup_epochs * steps_per_epoch
+    total_steps = total_epochs * steps_per_epoch
+
+    def lr_lambda(current_step: int) -> float:
+        if current_step < warmup_steps:
+            return max(current_step / max(warmup_steps, 1), 0.01)
+        progress = (current_step - warmup_steps) / max(total_steps - warmup_steps, 1)
+        return min_lr_ratio + 0.5 * (1.0 - min_lr_ratio) * (1.0 + math.cos(math.pi * progress))
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
+def build_weighted_sampler(records: list[dict], class_to_idx: dict[str, int], strategy: str) -> WeightedRandomSampler | None:
+    if strategy == "none":
+        return None
+    class_counts = Counter(class_to_idx[str(r["landmark_id"])] for r in records)
+    num_samples = len(records)
+    if strategy == "sqrt_weighted":
+        class_weight = {cls: 1.0 / math.sqrt(count) for cls, count in class_counts.items()}
+    elif strategy == "inverse_weighted":
+        class_weight = {cls: 1.0 / count for cls, count in class_counts.items()}
+    else:
+        return None
+    sample_weights = [class_weight[class_to_idx[str(r["landmark_id"])]] for r in records]
+    return WeightedRandomSampler(sample_weights, num_samples=num_samples, replacement=True)
 
 
 def export_onnx(model: nn.Module, image_size: int, out_path: Path, device: torch.device) -> bool:
@@ -234,7 +295,12 @@ def main() -> None:
     val_ds = LandmarkImageDataset(data_root, val_records, class_to_idx, eval_tf)
     test_ds = LandmarkImageDataset(data_root, test_records, class_to_idx, eval_tf)
 
-    sampler = DistributedSampler(train_ds, shuffle=True) if is_dist() else None
+    sampler = None
+    balance_strategy = str(cfg["training"].get("class_balance_strategy", "none"))
+    if is_dist():
+        sampler = DistributedSampler(train_ds, shuffle=True)
+    elif balance_strategy != "none":
+        sampler = build_weighted_sampler(train_records, class_to_idx, balance_strategy)
     batch_size = int(cfg["training"]["batch_size_per_gpu"])
     train_loader = DataLoader(
         train_ds,
@@ -271,7 +337,30 @@ def main() -> None:
         weight_decay=float(cfg["training"]["weight_decay"]),
     )
     scaler = torch.cuda.amp.GradScaler(enabled=torch.cuda.is_available())
-    criterion = nn.CrossEntropyLoss(label_smoothing=float(cfg["training"].get("label_smoothing", 0.0)))
+    scheduler = build_scheduler(optimizer, cfg, len(train_loader))
+
+    class_weights_tensor = None
+    if balance_strategy != "none" and is_dist():
+        class_counts = Counter(class_to_idx[str(r["landmark_id"])] for r in train_records)
+        if balance_strategy == "sqrt_weighted":
+            raw_weights = {cls: 1.0 / math.sqrt(count) for cls, count in class_counts.items()}
+        elif balance_strategy == "inverse_weighted":
+            raw_weights = {cls: 1.0 / count for cls, count in class_counts.items()}
+        else:
+            raw_weights = None
+        if raw_weights is not None:
+            total_w = sum(raw_weights.values())
+            normalized = {cls: w / total_w * len(raw_weights) for cls, w in raw_weights.items()}
+            class_weights_tensor = torch.tensor(
+                [normalized.get(i, 1.0) for i in range(len(names))],
+                dtype=torch.float32,
+                device=device,
+            )
+
+    criterion = nn.CrossEntropyLoss(
+        label_smoothing=float(cfg["training"].get("label_smoothing", 0.0)),
+        weight=class_weights_tensor,
+    )
 
     run_name = f"{cfg['model']['id']}_fold{args.fold}_{time.strftime('%Y%m%d_%H%M%S')}"
     run_dir = Path("runs") / run_name
@@ -327,11 +416,13 @@ def main() -> None:
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
+            if scheduler is not None:
+                scheduler.step()
             total_loss += loss.item() * labels.numel()
             count += labels.numel()
 
         if is_main():
-            val_metrics = evaluate(base_model, val_loader, device)
+            val_metrics = evaluate(base_model, val_loader, device, names)
             train_loss = total_loss / max(count, 1)
             metrics = {
                 "epoch": epoch + 1,
@@ -358,12 +449,15 @@ def main() -> None:
         if (run_dir / "best.pt").exists():
             checkpoint = torch.load(run_dir / "best.pt", map_location=device)
             base_model.load_state_dict(checkpoint["model"])
-        test_metrics = evaluate(base_model, test_loader, device)
+        test_metrics = evaluate(base_model, test_loader, device, names)
         final = {
             **best_metrics,
             "test_top1_accuracy": test_metrics["top1_accuracy"],
             "test_top3_accuracy": test_metrics["top3_accuracy"],
             "test_count": test_metrics["count"],
+            "test_macro_f1": test_metrics.get("macro_f1"),
+            "test_per_class": test_metrics.get("per_class"),
+            "test_confusion_matrix": test_metrics.get("confusion_matrix"),
             "onnx_export_success": None,
             "onnx_file_mb": None,
         }
