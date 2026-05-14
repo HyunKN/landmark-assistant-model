@@ -4,6 +4,16 @@ Unified Sprint 1 candidate training repo for Jongno landmark recognition.
 
 This is the preferred GitHub repository layout. It keeps one shared training/evaluation codebase and separates model candidates by config.
 
+## Project Docs Site
+
+The shareable Sprint 1 project docs live in `site/` and are deployable as a static Vercel site.
+
+```bash
+python scripts/verify_docs.py
+```
+
+Vercel should use the repository root. `vercel.json` rewrites `/` to `site/index.html`.
+
 ## Candidates
 
 - `mobileclip2_s4` -> `configs/candidates/mobileclip2_s4.yaml`
