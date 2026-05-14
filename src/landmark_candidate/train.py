@@ -307,7 +307,7 @@ def main() -> None:
         except Exception as exc:
             print(f"[wandb] disabled or unavailable: {exc}")
 
-    best_top3 = -1.0
+    best_score = (-1.0, -1.0)
     best_metrics: dict = {}
     epochs = int(cfg["training"]["epochs"])
     for epoch in range(epochs):
@@ -346,8 +346,9 @@ def main() -> None:
                 wandb.log(metrics)
             except Exception:
                 pass
-            if val_metrics["top3_accuracy"] > best_top3:
-                best_top3 = val_metrics["top3_accuracy"]
+            score = (val_metrics["top1_accuracy"], val_metrics["top3_accuracy"])
+            if score > best_score:
+                best_score = score
                 best_metrics = metrics
                 torch.save({"model": base_model.state_dict(), "classes": names, "config": cfg}, run_dir / "best.pt")
         if is_dist():
