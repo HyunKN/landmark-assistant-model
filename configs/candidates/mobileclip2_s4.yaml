@@ -29,7 +29,7 @@ training:
     - 0.26130258
     - 0.27577711
 runtime:
-  gpu_count: 6
+  gpu_count: 4
   precision: "fp16_amp_after_fp32_smoke"
   tracker: "wandb"
   backup: "rclone gdrive:"

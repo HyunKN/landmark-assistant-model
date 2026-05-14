@@ -2,11 +2,11 @@
 set -euo pipefail
 
 SESSION="${SESSION:-jongno-landmark-all-candidates}"
-GPUS="${GPUS:-0,1,2,3,4,5}"
-NPROC="${NPROC:-6}"
-DATA_ROOT="${DATA_ROOT:-/data/landmark-assistant/Dataset}"
+GPUS="${GPUS:-1,2,3,4}"
+NPROC="${NPROC:-4}"
+DATA_ROOT="${DATA_ROOT:-/workspace/landmark-assistant-model/Dataset}"
 WANDB_PROJECT="${WANDB_PROJECT:-landmark-assistant-sprint1}"
-EXPORT_ONNX="${EXPORT_ONNX:-1}"
+EXPORT_ONNX="${EXPORT_ONNX:-0}"
 CANDIDATES="${CANDIDATES:-mobileclip2_s4 mobileclip2_s3 mobileclip2_b mobilenetv4_hybrid_large mobilenetv4_conv_aa_large_in12k}"
 
 mkdir -p runs logs splits

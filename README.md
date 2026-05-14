@@ -27,7 +27,7 @@ One repo is better than five repos for this project because:
 The dataset is still growing. This repo scans the server dataset at execution time:
 
 ```text
-/data/landmark-assistant/Dataset/
+/workspace/landmark-assistant-model/Dataset/
   <landmark_id>/
     labels.json
     images/
@@ -36,7 +36,7 @@ The dataset is still growing. This repo scans the server dataset at execution ti
 As long as the folder and JSON format stay the same, add more landmark folders or records, then regenerate splits:
 
 ```bash
-export DATA_ROOT=/data/landmark-assistant/Dataset
+export DATA_ROOT=/workspace/landmark-assistant-model/Dataset
 bash scripts/make_splits.sh
 ```
 
@@ -51,12 +51,12 @@ cd jongno-landmark-model-candidates
 bash scripts/setup_venv.sh
 source .venv/bin/activate
 
-export DATA_ROOT=/data/landmark-assistant/Dataset
+export DATA_ROOT=/workspace/landmark-assistant-model/Dataset
 export WANDB_PROJECT=landmark-assistant-sprint1
 export GDRIVE_BACKUP_ROOT=gdrive:landmark-assistant/runs
 
 bash scripts/make_splits.sh
-bash scripts/run_candidate_tmux.sh mobileclip2_s4 0
+GPUS=1,2,3,4 NPROC=4 EXPORT_ONNX=0 bash scripts/run_candidate_tmux.sh mobileclip2_s4 0
 ```
 
 Run all candidates/folds sequentially:
@@ -67,12 +67,12 @@ bash scripts/run_all_candidates_tmux.sh
 
 ## Ranking
 
-Primary ranking:
+Primary ranking after the checkpoint-selection fix:
 
-1. mean validation Top-3 accuracy across folds
-2. mean validation Top-1 accuracy across folds
-3. locked test Top-3
-4. locked test Top-1
+1. mean validation Top-1 accuracy across folds
+2. mean validation Top-3 accuracy across folds
+3. locked test Top-1
+4. locked test Top-3
 5. out-of-scope AUROC when a true negative set exists
 6. ONNX export success
 7. latency and file size as secondary checks
