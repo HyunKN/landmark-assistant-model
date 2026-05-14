@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SITE = ROOT / "site"
+SITE = ROOT
 REQUIRED = [
     SITE / "index.html",
     SITE / "project-brief.html",

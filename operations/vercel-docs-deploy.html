@@ -19,7 +19,7 @@
     <p class="lead">
       현재 문서는 빌드가 필요 없는 정적 HTML/CSS라 Vercel로 배포할 수 있다.
       Vercel의 Root Directory는 repo root인 <code>./</code>로 설정한다.
-      repo root의 <code>vercel.json</code>이 <code>framework: null</code>을 명시하므로,
+      repo root의 <code>vercel.json</code>이 <code>framework: null</code>과 <code>outputDirectory: site</code>를 명시하므로,
       모델 학습용 <code>pyproject.toml</code>이 있어도 Python 앱으로 감지되지 않는다.
     </p>
   </header>
@@ -43,7 +43,7 @@
     <h2>배포 전 확인</h2>
     <ol class="read-order">
       <li><code>python scripts/verify_docs.py</code>로 필수 HTML 문서와 링크를 확인한다.</li>
-      <li>브라우저에서 <code>index.html</code>과 <code>project-brief.html</code>를 열어 시스템 그림이 읽히는지 본다.</li>
+      <li>브라우저에서 <code>site/index.html</code>과 <code>site/project-brief.html</code>를 열어 시스템 그림이 읽히는지 본다.</li>
       <li>Vercel 프로젝트의 Root Directory가 <code>./</code>인지 확인한다.</li>
       <li>배포 URL에서 <code>/</code>, <code>/project-brief.html</code>, <code>/operations/sprint1-status-2026-05-14.html</code>를 확인한다.</li>
     </ol>
@@ -53,7 +53,7 @@
     <h2>주의</h2>
     <p>
       현재 배포 repo는 모델 학습 코드와 HTML 문서 사이트를 함께 포함한다.
-      Vercel은 repo root의 <code>vercel.json</code>만 신뢰하도록 두고, 정적 HTML 파일도 repo root에 둔다.
+      Vercel은 repo root의 <code>vercel.json</code>만 신뢰하도록 두고, 실제 배포 산출물은 <code>site</code>에서 가져오게 한다.
     </p>
   </section>
 </main>

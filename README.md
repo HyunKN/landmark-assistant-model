@@ -6,13 +6,14 @@ This is the preferred GitHub repository layout. It keeps one shared training/eva
 
 ## Project Docs Site
 
-The shareable Sprint 1 project docs live in `site/` and are deployable as a static Vercel site.
+The shareable Sprint 1 project docs are available from the repository root for Vercel static hosting.
+The same files are also kept under `site/` as the source snapshot.
 
 ```bash
 python scripts/verify_docs.py
 ```
 
-Vercel should use the repository root. `vercel.json` rewrites `/` to `site/index.html`.
+Vercel should use the repository root. `vercel.json` sets the framework to `Other` and rewrites `/` to `index.html`.
 
 ## Candidates
 

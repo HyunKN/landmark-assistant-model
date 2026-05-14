@@ -3,7 +3,6 @@
   "framework": null,
   "installCommand": null,
   "buildCommand": null,
-  "outputDirectory": "site",
   "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [
