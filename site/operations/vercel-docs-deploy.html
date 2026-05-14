@@ -18,7 +18,8 @@
     <h1>Vercel Docs Deploy</h1>
     <p class="lead">
       현재 문서는 빌드가 필요 없는 정적 HTML/CSS라 Vercel로 배포할 수 있다.
-      프로젝트 루트에 있는 <code>vercel.json</code>은 <code>/</code> 요청을 <code>/site/index.html</code>로 보내도록 구성한다.
+      Vercel의 Root Directory는 <code>site</code>로 설정한다.
+      repo root에는 모델 학습용 <code>pyproject.toml</code>이 있으므로 root로 배포하면 Python 앱으로 잘못 감지될 수 있다.
     </p>
   </header>
 
@@ -27,7 +28,7 @@
       <article class="card priority-card">
         <span class="tag">Recommended</span>
         <h3>GitHub repo 연결</h3>
-        <p>문서 폴더를 포함한 repo를 Vercel에 연결한다. Framework Preset은 Other, Build Command는 비워둔다.</p>
+        <p>문서 폴더를 포함한 repo를 Vercel에 연결한다. Root Directory는 <code>site</code>, Framework Preset은 Other, Build Command는 비워둔다.</p>
       </article>
       <article class="card">
         <span class="tag">Local</span>
@@ -42,7 +43,7 @@
     <ol class="read-order">
       <li><code>python scripts/verify_docs.py</code>로 필수 HTML 문서와 링크를 확인한다.</li>
       <li>브라우저에서 <code>site/index.html</code>과 <code>site/project-brief.html</code>를 열어 시스템 그림이 읽히는지 본다.</li>
-      <li>Vercel 프로젝트가 repo root를 기준으로 배포되는지 확인한다.</li>
+      <li>Vercel 프로젝트의 Root Directory가 <code>site</code>인지 확인한다.</li>
       <li>배포 URL에서 <code>/</code>, <code>/project-brief.html</code>, <code>/operations/sprint1-status-2026-05-14.html</code>를 확인한다.</li>
     </ol>
   </section>
@@ -51,7 +52,7 @@
     <h2>주의</h2>
     <p>
       현재 배포 repo는 모델 학습 코드와 HTML 문서 사이트를 함께 포함한다.
-      모델 학습용 Markdown 문서 폴더인 <code>docs</code>는 그대로 두고, Vercel 배포용 HTML 사이트는 <code>site</code>에 둔다.
+      모델 학습용 Python 설정이 repo root에 있으므로, Vercel Root Directory를 반드시 <code>site</code>로 둔다.
     </p>
   </section>
 </main>
